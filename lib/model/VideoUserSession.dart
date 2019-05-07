@@ -5,7 +5,7 @@ class VideoUserSession{
   Widget view;
   int viewId;
 
-  VideoUserSession(this.uid,this.view,this.viewId);
+  VideoUserSession(this.uid,this.view,{this.viewId});
 
 }
 

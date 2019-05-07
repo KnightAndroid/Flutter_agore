@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:simple_permissions/simple_permissions.dart';//记得加上这句话
+import 'package:flutter_agore/video/videoCallPage.dart';
 
 void main() => runApp(MyApp());
 
@@ -147,7 +149,7 @@ class HomePageState extends State<HomePage>
                   child: Center(
                      child: InkWell(
                        onTap: (){
-
+                          onVideo();
                        },
                        child: Text(
                          'LOG IN',
@@ -165,6 +167,28 @@ class HomePageState extends State<HomePage>
 
       ],
     );
+  }
+
+
+  onVideo() async{
+    //申请读文件的权限
+    var permission_camera =
+    SimplePermissions.requestPermission(Permission.Camera);
+    permission_camera.then((permission_status) async {
+
+      var permission_phone = SimplePermissions.requestPermission(Permission.RecordAudio);
+
+      permission_phone.then((permission_two) async{
+        Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (context) => new videoCallPage(
+                  channelName: "122343",
+                )));
+      });
+    });
+
+
   }
 
 
