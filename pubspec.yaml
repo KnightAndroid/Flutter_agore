@@ -23,8 +23,9 @@ dependencies:
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^0.1.2
-  agora_rtc_engine: ^0.9.4
+  agora_rtc_engine: ^0.9.5
   simple_permissions: ^0.1.9
+  toast: ^0.1.3
 dev_dependencies:
   flutter_test:
     sdk: flutter

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:simple_permissions/simple_permissions.dart';//记得加上这句话
-import 'package:flutter_agore/video/videoCallPage.dart';
+import 'package:simple_permissions/simple_permissions.dart'; //记得加上这句话
+import 'package:flutter_agore/video/VideoCallPage.dart';
+import 'package:flutter_agore/audio/AudioCallPage.dart';
+import 'package:toast/toast.dart';
 
 void main() => runApp(MyApp());
 
@@ -9,7 +10,6 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Sliding Login',
       home: HomePage(),
     );
   }
@@ -22,315 +22,140 @@ class HomePage extends StatefulWidget {
   }
 }
 
-class HomePageState extends State<HomePage>
-    with SingleTickerProviderStateMixin {
-  bool isLogin = true;
-  Animation<double> loginSize;
-  AnimationController loginController;
-  AnimatedOpacity opacityAnimation;
-  Duration animationDuration = Duration(milliseconds: 270);
-
-  //登录
-  final _loginTextController = TextEditingController();
-  //注册
-  final _registerTextController = TextEditingController();
-
+class HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-
-    SystemChrome.setEnabledSystemUIOverlays([]);
-
-    loginController =
-        AnimationController(vsync: this, duration: animationDuration);
-
-    opacityAnimation =
-        AnimatedOpacity(opacity: 0.0, duration: animationDuration);
   }
 
   @override
   void dispose() {
-    loginController.dispose();
-    _loginTextController.dispose();
     super.dispose();
   }
 
-  Widget _buildLoginWidgets() {
-    return Container(
-      padding: EdgeInsets.only(bottom: 62, top: 16),
-      width: MediaQuery.of(context).size.width,
-      height: loginSize.value,
-      decoration: BoxDecoration(
-          color: Color(0XFF2a3ed7),
-          borderRadius: BorderRadius.only(
-              bottomLeft: Radius.circular(190),
-              bottomRight: Radius.circular(190))),
-      child: Align(
-        alignment: Alignment.bottomCenter,
-        child: AnimatedOpacity(
-          opacity: loginController.value,
-          duration: animationDuration,
-          child: GestureDetector(
-            onTap: isLogin ? null : () {
-              loginController.reverse();
-
-              setState(() {
-                isLogin = !isLogin;
-              });
-            },
-            child: Container(
-              child: Text(
-                'LOG IN'.toUpperCase(),
-                style: TextStyle(
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white),
+  //申请权限
+  onVideo() async {
+    SimplePermissions.requestPermission(Permission.Camera).then((status_first) {
+      if (status_first == PermissionStatus.denied) {
+        //如果拒绝
+        Toast.show("此功能需要授予相机权限", context,
+            duration: Toast.LENGTH_SHORT, gravity: Toast.CENTER);
+      } else if (status_first == PermissionStatus.authorized) {
+        //如果同意
+        SimplePermissions.requestPermission(Permission.RecordAudio)
+            .then((status_second) {
+          if (status_second == PermissionStatus.denied) {
+            //如果拒绝
+            Toast.show("此功能需要授予录音权限", context,
+                duration: Toast.LENGTH_SHORT, gravity: Toast.CENTER);
+          } else if (status_second == PermissionStatus.authorized) {
+            //如果授权同意
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => new VideoCallPage(
+                      //视频房间频道号写死，为了方便体验
+                      channelName: "122343",
+                    ),
               ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLoginComponents() {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: <Widget>[
-        Visibility(
-          visible: isLogin,
-          child: Padding(
-            padding: const EdgeInsets.only(left: 42, right: 42),
-            child: Column(
-              children: <Widget>[
-
-                Theme(
-                  data: new ThemeData(primaryColor: Colors.white,hintColor: Colors.white),
-                  child: new  TextField(
-                    controller: _loginTextController,
-                    cursorColor: Colors.white,
-                    style: TextStyle(color: Colors.white),
-                    decoration: InputDecoration(
-                      prefixIcon: Icon(Icons.email,color: Colors.white),
-                      hintText: 'Email',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(32)),
-                      ),
-                    ),
-                  ),
-                ),
-
-
-                Theme(
-                  data: new ThemeData(primaryColor:Colors.white,hintColor: Colors.white),
-                  child:                 Padding(
-                    padding: const EdgeInsets.only(top: 16),
-                    child: TextField(
-                      style: TextStyle(color: Colors.white),
-                      decoration: InputDecoration(
-                          prefixIcon: Icon(Icons.vpn_key,color: Colors.white),
-                          hintText: 'Password',
-                          border: OutlineInputBorder(
-                              borderRadius: BorderRadius.all(
-                                  Radius.circular(32)))),
-                    ),
-                  ),
-                ),
-
-
-                Container(
-                  width: 200,
-                  height: 40,
-                  margin: EdgeInsets.only(top: 32),
-                  decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.all(Radius.circular(50))
-                  ),
-                  child: Center(
-                     child: InkWell(
-                       onTap: (){
-                          onVideo();
-                       },
-                       child: Text(
-                         'LOG IN',
-                         style: TextStyle(color: Color(0XFF2a3ed7),
-                             fontWeight: FontWeight.bold
-                         ),
-                       ),
-                     ),
-                  ),
-                )
-              ],
-            ),
-          ),
-        ),
-
-      ],
-    );
-  }
-
-
-  onVideo() async{
-    //申请读文件的权限
-    var permission_camera =
-    SimplePermissions.requestPermission(Permission.Camera);
-    permission_camera.then((permission_status) async {
-
-      var permission_phone = SimplePermissions.requestPermission(Permission.RecordAudio);
-
-      permission_phone.then((permission_two) async{
-        Navigator.push(
-            context,
-            MaterialPageRoute(
-                builder: (context) => new videoCallPage(
-                  channelName: "122343",
-                )));
-      });
+            );
+          }
+        });
+      }
     });
-
-
   }
 
-
-  //注册页
-  Widget _buildRegistercomponents() {
-    return Padding(
-      padding: EdgeInsets.only(
-          left: 42,
-          right: 42,
-          top: 32,
-          bottom: 32
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          Padding(
-            padding: const EdgeInsets.only(bottom: 32),
-            child: Text(
-              'Sign Up'.toUpperCase(),
-              style: TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0XFF2a3ed7)),
-            ),
-          ),
-          TextField(
-            style: TextStyle(color: Colors.black, height: 0.5),
-            decoration: InputDecoration(
-                prefixIcon: Icon(
-                  Icons.email,
+  onAudio() async {
+    SimplePermissions.requestPermission(Permission.RecordAudio)
+        .then((status_first) {
+      if (status_first == PermissionStatus.denied) {
+        //如果拒绝
+        Toast.show("此功能需要授予录音权限", context,
+            duration: Toast.LENGTH_SHORT, gravity: Toast.CENTER);
+      } else if (status_first == PermissionStatus.authorized) {
+        //如果授权同意 跳转到语音页面
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => new AudioCallPage(
+                  //频道写死，为了方便体验
+                  channelName: "122343",
                 ),
-                hintText: 'Email',
-                border: OutlineInputBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(32)))),
           ),
-          Padding(
-            padding: const EdgeInsets.only(bottom: 16, top: 16),
-            child: TextField(
-              style: TextStyle(color: Colors.black, height: 0.5),
-              decoration: InputDecoration(
-                  prefixIcon: Icon(Icons.vpn_key),
-                  hintText: 'Password',
-                  border: OutlineInputBorder(
-                      borderRadius: BorderRadius.all(Radius.circular(32)))),
-            ),
-          ),
-          TextField(
-            style: TextStyle(color: Colors.black, height: 0.5),
-            decoration: InputDecoration(
-                prefixIcon: Icon(Icons.vpn_key),
-                hintText: 'Confirm Password',
-                border: OutlineInputBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(32)))),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(top: 24),
-            child: Container(
-              width: 200,
-              height: 40,
-              margin: EdgeInsets.only(top: 32),
-              decoration: BoxDecoration(
-                  color: Color(0XFF2a3ed7),
-                  borderRadius: BorderRadius.all(Radius.circular(50))
-              ),
-              child: Center(
-                child: Text(
-                  'SIGN UP',
-                  style: TextStyle(color: Colors.white,
-                      fontWeight: FontWeight.bold
-                  ),
-                ),
-              ),
-            ) ,
-          )
-        ],
-      ),
-    );
+        );
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    double _defaultLoginSize = MediaQuery.of(context).size.height / 1.6;
-
-    loginSize = Tween<double>(begin: _defaultLoginSize, end: 200).animate(
-        CurvedAnimation(parent: loginController, curve: Curves.linear));
-
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: Stack(
-        children: <Widget>[
-          Align(
-            alignment: Alignment.bottomCenter,
-            child: AnimatedOpacity(
-              opacity: isLogin ? 0.0 : 1.0,
-              duration: animationDuration,
-              child: Container(child: _buildRegistercomponents()),
-            ),
-          ),
-          Align(
-            alignment: Alignment.bottomCenter,
-            child: Container(
-              color: isLogin && !loginController.isAnimating ? Colors.white : Colors.transparent,
-              width: MediaQuery.of(context).size.width,
-              height: _defaultLoginSize/1.5,
-              child: Visibility(
-                visible: isLogin,
-                child: GestureDetector(
-                  onTap: () {
-                    loginController.forward();
-                    setState(() {
-                      isLogin = !isLogin;
-                    });
-                  },
-                  child: Center(
-                    child: Text(
-                      'Sign Up'.toUpperCase(),
-                      style: TextStyle(
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0XFF2a3ed7),
-                      ),
+      body: Center(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly, //主轴空白区域均分
+          children: <Widget>[
+            //左按钮
+            RaisedButton(
+              padding: EdgeInsets.all(0),
+              //点击事件
+              onPressed: () {
+                //去往语音页面
+                onAudio();
+              },
+              child: Container(
+                height: 120,
+                width: 120,
+                //装饰
+                decoration: BoxDecoration(
+
+                    //渐变色
+                    gradient: const LinearGradient(
+                      colors: [Colors.blueAccent, Colors.lightBlueAccent],
                     ),
-                  ),
+                    //圆角12度
+                    borderRadius: BorderRadius.circular(12.0)),
+                child: Text(
+                  "语音通话",
+                  style: TextStyle(color: Colors.white, fontSize: 18.0),
                 ),
+                //文字居中
+                alignment: Alignment.center,
+              ),
+              shape: new RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12.0),
               ),
             ),
-          ),
-          AnimatedBuilder(
-            animation: loginController,
-            builder: (context, child) {
-              return _buildLoginWidgets();
-            },
-          ),
-          Align(
-              alignment: Alignment.topCenter,
+            //右按钮
+            RaisedButton(
+              padding: EdgeInsets.all(0),
+              onPressed: () {
+                //去往视频页面
+                onVideo();
+              },
               child: Container(
-                width: MediaQuery.of(context).size.width,
-                height: MediaQuery.of(context).size.height/2,
-                child: Center(child: _buildLoginComponents()),
-              )
-          )
-        ],
+                height: 120,
+                width: 120,
+                //装饰--->渐变
+                decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Colors.blueAccent, Colors.lightBlueAccent],
+                    ),
+                    //圆角12度
+                    borderRadius: BorderRadius.circular(12.0)),
+                child: Text(
+                  "视频通话",
+                  style: TextStyle(color: Colors.white, fontSize: 18.0),
+                ),
+                //文字居中
+                alignment: Alignment.center,
+              ),
+              shape: new RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12.0),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

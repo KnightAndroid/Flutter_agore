@@ -1,31 +1,31 @@
 
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:agora_rtc_engine/agora_rtc_engine.dart';
 import 'package:flutter_agore/model/VideoUserSession.dart';
 
-class videoCallPage extends StatefulWidget{
+class VideoCallPage extends StatefulWidget{
 
   //频道号 上个页面传递
   String channelName;
 
-  videoCallPage({Key key,this.channelName}) : super(key:key);
+  VideoCallPage({Key key,this.channelName}) : super(key:key);
 
 
   @override
   State<StatefulWidget> createState(){
-    return new videoCallState();
+    return new VideoCallState();
   }
 }
 
 
-class videoCallState extends State<videoCallPage> {
+class VideoCallState extends State<VideoCallPage> {
 
   //声网sdk的appId
   String agore_appId = "6d936474d3ad4c1584a612dfebd2c529";
 
   //用户seesion对象
   static final _userSessions = List<VideoUserSession>();
+  //是否静音
   bool muted = false;
 
 
@@ -59,9 +59,11 @@ class videoCallState extends State<videoCallPage> {
     //设置视频为可用 启用视频模块
     AgoraRtcEngine.enableVideo();
     //每次需要原生视频都要调用_createRendererView
-    _createRendererView(0, (viewId){
+    _createDrawView(0, (viewId){
     //设置本地视图。 该方法设置本地视图。App 通过调用此接口绑定本地视频流的显示视图 (View)，并设置视频显示模式。
     // 在 App 开发中，通常在初始化后调用该方法进行本地视频设置，然后再加入频道。退出频道后，绑定仍然有效，如果需要解除绑定，可以指定空 (null) View 调用
+      //该方法设置本地视频显示模式。App 可以多次调用此方法更改显示模式。
+      //RENDER_MODE_HIDDEN(1)：优先保证视窗被填满。视频尺寸等比缩放，直至整个视窗被视频填满。如果视频长宽与显示窗口不同，多出的视频将被截掉
     AgoraRtcEngine.setupLocalVideo(viewId, VideoRenderMode.Hidden);
     //开启视频预览
     AgoraRtcEngine.startPreview();
@@ -87,10 +89,9 @@ class videoCallState extends State<videoCallPage> {
     AgoraRtcEngine.onUserJoined = (int uid,int elapsed){
       print("新用户所加入的id为:$uid");
       setState(() {
-        _createRendererView(uid, (viewId){
-          //设置本地视频显示模式。
-          //该方法设置本地视频显示模式。App 可以多次调用此方法更改显示模式。
-          //RENDER_MODE_HIDDEN(1)：优先保证视窗被填满。视频尺寸等比缩放，直至整个视窗被视频填满。如果视频长宽与显示窗口不同，多出的视频将被截掉
+        _createDrawView(uid, (viewId){
+          //设置远程用户的视频视图
+
           AgoraRtcEngine.setupRemoteVideo(viewId, VideoRenderMode.Hidden, uid);
         });
       });
@@ -106,13 +107,16 @@ class videoCallState extends State<videoCallPage> {
 
     };
 
-    //
+    //监听用户是否离开这个频道
+    AgoraRtcEngine.onLeaveChannel  =  (){
+      print("用户离开");
+    };
 
   }
 
 
   //创建渲染视图
-  void _createRendererView(int uid,Function(int viewId) successCreate){
+  void _createDrawView(int uid,Function(int viewId) successCreate){
     //该方法创建视频渲染视图 并且添加新的视频会话对象，这个渲染视图能用在本地/远端流 这里需要更新
     //Agora SDK 在 App 提供的 View 上进行渲染。
     Widget view = AgoraRtcEngine.createNativeView(uid, (viewId){
@@ -126,7 +130,7 @@ class videoCallState extends State<videoCallPage> {
 
 
     //增加视频会话对象 为了视频需要(通过uid和容器信息)
-    VideoUserSession videoUserSession = VideoUserSession(uid, view);
+    VideoUserSession videoUserSession = VideoUserSession(uid, view: view);
     _userSessions.add(videoUserSession);
 
 
@@ -176,7 +180,7 @@ class videoCallState extends State<videoCallPage> {
 
 
   //最大可能占满整个布局
-  Widget _expandedVideoRow(List<Widget> views){
+  Widget _createVideoRow(List<Widget> views){
     List<Widget> wrappedViews = views.map((Widget view) => _videoView(view)).toList();
     return Expanded(
       child: new Row(
@@ -186,7 +190,6 @@ class videoCallState extends State<videoCallPage> {
   }
 
 
-  //开关本地音频发送
   void _switchMute(){
     setState(() {
       muted = !muted;
@@ -197,17 +200,20 @@ class videoCallState extends State<videoCallPage> {
 
 
   //切换前后摄像头
-  void _onSwitchCamera(){
+  void _onChangeCamera(){
     AgoraRtcEngine.switchCamera();
   }
 
-  //退出本页面
+  //退出频道 退出本页面
   void _onExit(BuildContext context){
+    AgoraRtcEngine.leaveChannel();
     Navigator.pop(context);
 
   }
+
+
   //视频视图布局
-  Widget _viewRows(){
+  Widget _videoLayout(){
     //先获取视频试图个数
     List<Widget> views = _getRenderViews();
 
@@ -222,13 +228,13 @@ class videoCallState extends State<videoCallPage> {
           ),
         );
 
-      //两个用户的时候 上下布局
+      //两个用户的时候 上下布局 自己在上面 对方在下面
       case 2:
         return new Container(
           child: new Column(
             children: <Widget>[
-              _expandedVideoRow([views[0]]),
-              _expandedVideoRow([views[1]]),
+              _createVideoRow([views[0]]),
+              _createVideoRow([views[1]]),
             ],
           ),
         );
@@ -238,11 +244,11 @@ class videoCallState extends State<videoCallPage> {
         return new Container(
           child: new Column(
             children: <Widget>[
-              //截取0-2 不包括2
-              _expandedVideoRow(views.sublist(0, 2)),
+              //截取0-2 不包括2 上面一列两个 下面一个
+              _createVideoRow(views.sublist(0, 2)),
 
               //截取2 -3 不包括3
-              _expandedVideoRow(views.sublist(2, 3))
+              _createVideoRow(views.sublist(2, 3))
             ],
           ),
         );
@@ -252,11 +258,11 @@ class videoCallState extends State<videoCallPage> {
          return new Container(
            child: new Column(
              children: <Widget>[
-               //截取0-2 不包括2 也就是0,1
-               _expandedVideoRow(views.sublist(0, 2)),
+               //截取0-2 不包括2 也就是0,1 上面 下面各两个用户
+               _createVideoRow(views.sublist(0, 2)),
 
                //截取2-4 不包括4 也就是 3,4
-               _expandedVideoRow(views.sublist(2, 4))
+               _createVideoRow(views.sublist(2, 4))
              ],
            ),
          );
@@ -312,7 +318,7 @@ class videoCallState extends State<videoCallPage> {
 
           //前后摄像切换
           RawMaterialButton(
-            onPressed: () => _onSwitchCamera(),
+            onPressed: () => _onChangeCamera(),
             child: new Icon(
               Icons.switch_camera,
               color: Colors.blueAccent,
@@ -337,10 +343,9 @@ class videoCallState extends State<videoCallPage> {
        appBar: new AppBar(
          title: Text(widget.channelName),
        ),
-       backgroundColor: Colors.black,
        body: new Center(
          child: Stack(
-           children: <Widget>[_viewRows(),_bottomToolBar()],
+           children: <Widget>[_videoLayout(),_bottomToolBar()],
          ),
        ),
 
